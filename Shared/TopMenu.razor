@@ -1,0 +1,43 @@
+﻿<BarBrand>
+    <BarItem>
+
+    </BarItem>
+</BarBrand>
+<BarEnd>
+    <BarItem>
+        <BarDropdown>
+            <BarDropdownToggle>
+                <a style="color:#343a40;">@userName</a>
+            </BarDropdownToggle>
+            <BarDropdownMenu>
+                <BarDropdownItem To="/" Clicked="@LogOut">
+                    Desconectarse
+                </BarDropdownItem>
+            </BarDropdownMenu>
+        </BarDropdown>
+    </BarItem>
+</BarEnd>
+
+@code {
+    static string userName;
+
+    SessionUser sessionTest;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUsuario();
+        await base.OnInitializedAsync();
+    }
+    private async Task GetUsuario()
+    {
+        sessionTest = JsonConvert.DeserializeObject<SessionUser>(await JS.InvokeAsync<string>("sessionStorage.getItem", "SessionData"));
+        userName = sessionTest.Usuario;
+    }
+
+    private async Task LogOut()
+    {
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "SessionData");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "UserData");
+        sessionTest = null;
+    }
+}

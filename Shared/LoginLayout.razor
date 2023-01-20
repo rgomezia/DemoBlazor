@@ -1,0 +1,59 @@
+﻿@using DemoBlazor.Models.LoginModels;
+@inherits LayoutComponentBase
+
+<style>
+    .custom-checkbox .custom-control-input:checked ~ .custom-control-label:after {
+        content: '\2611';
+        font-size: 24px;
+        color: black;
+    }
+
+    .custom-control-label {
+        padding-top: 4px;
+    }
+
+    .custom-checkbox .custom-control-label:after {
+        content: '\2610';
+        font-size: 24px;
+        color: grey;
+    }
+</style>
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Identificación</title>
+    <link rel="icon" type="image/png" href="/css/images/KGroup.png" />
+    <link href="https://fonts.googleapis.com/css?family=Karla:400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.materialdesignicons.com/4.8.95/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+
+    <link href="css/login.css" rel="stylesheet" />
+
+</head>
+
+<body>
+
+                            <CascadingValue Value="app">
+                                @Body
+                            </CascadingValue>
+
+</body>
+</html>
+
+
+
+@code {
+
+    Aplicacion app = new Aplicacion()
+        {
+            idAplicacion = "VK_APP_ENOLOGIA",
+            tituloApp = "Gestion Enologia",
+            tipoLogin = "APP"
+        };
+}

@@ -1,0 +1,73 @@
+﻿@layout RootLayout
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+@using System.Globalization
+
+<Layout Sider>
+
+    <LayoutSider Class="SideMenuAnimation">
+        <LayoutSiderContent>
+            <Bar @ref="@sidebar" Mode="BarMode.VerticalInline"
+                 Breakpoint="Breakpoint.Desktop"
+                 Background="Background.Dark"
+                 ThemeContrast="ThemeContrast.Dark">
+
+                <SideMenu></SideMenu>
+
+            </Bar>
+        </LayoutSiderContent>
+    </LayoutSider>
+
+    <Layout>
+
+        <LayoutHeader Fixed Padding="Padding.Is3.FromBottom">
+            <Bar Mode="BarMode.Horizontal"
+                 Style="background-color:#eef2f7;"
+                 ThemeContrast="ThemeContrast.Light">
+                <BarToggler Bar="@sidebar" />
+
+                <TopMenu></TopMenu>
+
+            </Bar>
+        </LayoutHeader>
+
+        <LayoutContent Padding="Padding.Is5.OnDesktop.OnX.Is3.OnTablet.OnX.Is3.OnMobile.OnX.Is1.OnY.OnAll">
+            <Div>
+                <CascadingValue Value="nfiEntero" Name="NumberFormatEntero">
+                    <CascadingValue Value="nfiDecimal" Name="NumberFormatDecimal">
+                               @Body
+                    </CascadingValue>    
+                </CascadingValue>
+            </Div>
+        </LayoutContent>
+    </Layout>
+
+</Layout>
+
+
+
+@code {
+    private Bar sidebar;
+    NumberFormatInfo nfiDecimal = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+    NumberFormatInfo nfiEntero = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+
+    [Inject]
+    Blazorise.Localization.ITextLocalizerService localizationService { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            localizationService.ChangeLanguage( "es" );
+            nfiDecimal.NumberGroupSeparator = ".";
+            nfiDecimal.NumberDecimalDigits = 2;
+            nfiDecimal.NumberDecimalSeparator = ",";
+            nfiDecimal.CurrencySymbol = "CLP";
+            nfiEntero.NumberGroupSeparator = ".";
+            nfiEntero.NumberDecimalDigits = 0;
+            nfiEntero.NumberDecimalSeparator = ",";
+            nfiEntero.CurrencySymbol = "CLP";
+        }
+        //sidebarInfo = await crearMenu();
+    }
+}

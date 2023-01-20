@@ -7,8 +7,34 @@
   </PropertyGroup>
 
   <ItemGroup>
+
+	  
+    <PackageReference Include="Blazorise.Animate" Version="1.1.6" />
+
+	  
+    <PackageReference Include="Blazorise.Components" Version="1.1.6" />
+
+	  
+    <PackageReference Include="Blazorise.DataGrid" Version="1.1.6" />
+
+	  
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.1" PrivateAssets="all" />
+	  <PackageReference Include="Blazorise.Icons.Material" Version="1.1.6" />
+	  <PackageReference Include="Blazorise.LoadingIndicator" Version="1.1.6" />
+	  <PackageReference Include="Blazorise.Material" Version="1.1.6" />
+	  <PackageReference Include="Blazorise.Snackbar" Version="1.1.6" />
+	  <PackageReference Include="Blazorise.SpinKit" Version="1.1.6" />
+
+
+	  
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+	  <PackageReference Include="Newtonsoft.Json.Bson" Version="1.0.2" />
+	  <PackageReference Include="RestSharp" Version="106.13.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Servicios\" />
   </ItemGroup>
 
 </Project>

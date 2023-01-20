@@ -1,0 +1,485 @@
+﻿@layout LoginLayout
+@page "/"
+
+
+@if (!dataShow)
+{
+    <Animate Animation="Animations.ZoomIn" Auto Duration="TimeSpan.FromMilliseconds( 800 )">
+        <Div style="margin: auto;width: 50%;padding: 10px; top: 15vh;">
+            <SpinKit Centered Type="SpinKitType.Flow" Size="50px" Color="#7177c7" />
+        </Div>
+    </Animate>
+}
+else
+{
+    <Animate Animation="Animations.ZoomIn" Auto Duration="TimeSpan.FromMilliseconds( 800 )">
+        <main class="d-flex align-items-center min-vh-100 py-3 py-md-0">
+            <div class="container">
+                <div class="card login-card">
+                    <div class="row no-gutters">
+                        <div class="col-md-5">
+                            <img src="css/images/Login-MontGrass.jpg" alt="login" class="login-card-img">
+                        </div>
+                        <div class="col-md-7">
+                            <div class="card-body">
+                                <div class="brand-wrapper">
+                                    <img src="css/images/LogoMontgras.png" alt="logo" class="logo">
+                                </div>
+                                @*p class="login-card-description">Inicio Sesión</p>*@
+                                <form action="#!" style="height:25%;">
+                                    <Validations @ref="userValidations" Mode="ValidationMode.Auto" ValidateOnLoad="false" Model="@user">
+                                        <div class="form-group mb-4">
+                                            <Validation Validator="@ValidationRule.IsNotEmpty">
+                                                <Field>
+                                                    <TextEdit Placeholder="Usuario" Style="font-size:17px;" @bind-Text="@user.User" />
+                                                </Field>
+                                            </Validation>
+                                        </div>
+
+                                        <div class="form-group mb-4">
+                                            <Validation Validator="@ValidatePassword">
+                                                <Field>
+                                                    <TextEdit Role="TextRole.Password" Style="font-size:17px;" Placeholder="Contraseña" @bind-Text="@user.Pass" />
+                                                </Field>
+                                            </Validation>
+                                        </div>
+                                        <div class="form-group mb-4">
+                                            <Validation Validator="@ValidateSeleccion">
+                                                <Field JustifyContent="JustifyContent.End">
+                                                    <FieldBody ColumnSize="ColumnSize.IsFull.OnTablet.Is12.OnDesktop">
+                                                        <Addons Margin="Margin.Is0.OnAll">
+                                                            <Addon AddonType="AddonType.Body">
+                                                                <SelectList TItem="Empresa"
+                                                                        TValue="int"
+                                                                        Data="@user.empresas"
+                                                                        TextField="@((item)=>item.descripcion)"
+                                                                        ValueField="@((item)=>item.id)"
+                                                                        SelectedValue="@user.empresa.id"
+                                                                        SelectedValueChanged="EmpresaValueChangedHandler"
+                                                                        DefaultItemText="Selecciona una empresa"
+                                                                        Style="height:44px; font-size:17px; padding-left: 22px;">
+                                                                </SelectList>
+                                                            </Addon>
+                                                            <Addon AddonType="AddonType.End" Style="display:inline-block;height:38px;">
+                                                                <Button Class="btn btn-block login-btn mb-4" Style="height:44px; font-size:17x; padding-left:22px;" @onclick="buscarEmpresas">
+                                                                    <Icon Name="@IconName.Search" />
+                                                                </Button>
+                                                            </Addon>
+                                                        </Addons>
+                                                    </FieldBody>
+                                                </Field>
+                                            </Validation>
+                                        </div>
+                                    </Validations>
+                                    <div class="form-group mb-4">
+                                        <Column Flex="Flex.JustifyContent.Center">
+                                            <Button Class="btn btn-block login-btn mb-4" Style="height:45px; width:250px;" @onclick="ValidateUser">Ingresar</Button>
+                                        </Column>
+                                        <Column Flex="Flex.JustifyContent.Center">
+                                            <Field>
+                                                <Check TValue="bool" @bind-Checked="user.RememberMe" Style="margin-top:-5px;"><Text Style="font-size:15px;">Recordar</Text></Check>
+                                            </Field>
+                                        </Column>
+                                        <Column Flex="Flex.JustifyContent.Center" Class="mt-4">
+                                            <a class="forgot-password-link" href="/Recuperar">¿Olvidaste tu contraseña?</a>
+                                        </Column>
+                                    </div>
+                                </form>
+                                <Column Flex="Flex.JustifyContent.Center">
+                                    <h5 style="width: 100%; text-align: center; font-family:'Roboto'; font-size:14px;" class="foterReferenceText">Desarrollado por <Span Class="foterReferenceVisualK">VisualK Group</Span></h5>
+                                </Column>
+                                <Column><h5 style="text-align: center; font-size:12px;" class="foterReferenceText">1.0.0</h5></Column>
+                                <SnackbarStack @ref="snackbarStack" Location="SnackbarStackLocation.End" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </Animate>
+}
+
+<LoadingIndicator @ref="loadingIndicator" FullScreen FadeIn>
+    <IndicatorTemplate>
+        <Animate Animation="Animations.FlipLeft" Auto Duration="TimeSpan.FromMilliseconds( 700 )">
+            <Div>
+                <SpinKit Centered Type="SpinKitType.Flow" Size="50px" Color="#7177c7" />
+            </Div>
+        </Animate>
+    </IndicatorTemplate>
+</LoadingIndicator>
+
+
+@code {
+    bool dataShow = false;
+    SnackbarStack snackbarStack;
+    double intervalBeforeMsgClose = 2000;
+
+    [CascadingParameter]
+    public Aplicacion app { get; set; }
+    Settings settings = new Settings();
+
+    DemoBlazor.Models.LoginModels.Usuario user = new();
+    DemoBlazor.Models.LoginModels.Usuario storedUser = new();
+    SessionUser session = new();
+
+    Validations userValidations;
+    Modal ModalRef;
+
+    Empresa empresa = new Empresa();
+    IEnumerable<Empresa> empresaData = new List<Empresa>();
+    Empresa selectedEmpresa { get; set; } = new Empresa();
+
+    protected override async void OnInitialized()
+    {
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "SessionData");
+        StateHasChanged();
+    }
+
+    void EmpresaValueChangedHandler(int newValue)
+    {
+        if (newValue == 0)
+        {
+            user.empresa.id = 0;
+            user.empresa.descripcion = "";
+        }
+        else
+        {
+            user.empresa.id = Convert.ToInt32(newValue);
+            user.empresa.descripcion = user.empresas.Where(c => c.id == Convert.ToInt32(newValue)).Select(c => c.descripcion).First();
+        }
+        StateHasChanged();
+    }
+
+    void ValidateSeleccion(ValidatorEventArgs e)
+    {
+        e.Status = user.empresa.id == 0 ? ValidationStatus.Error :
+            user.empresa.descripcion == "" ? ValidationStatus.Error : ValidationStatus.Success;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool fristRender)
+    {
+        if (fristRender)
+        {
+            settings = await Http.GetFromJsonAsync<Settings>("Settings.json");
+            var respuesta = await JS.InvokeAsync<string>("localStorage.getItem", "UserData");
+            // var b = prueba[0];
+            if (respuesta != null && respuesta != "")
+                user = JsonConvert.DeserializeObject<DemoBlazor.Models.LoginModels.Usuario>(respuesta);
+
+            await Task.Delay(2000);
+            dataShow = true;
+            StateHasChanged();
+            //ModalRef.Show();
+        }
+    }
+
+    public async Task llamarJs()
+    {
+        await snackbarStack.PushAsync("No se pudo conectar con el servidor", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+        //await JS.MostrarAlerta("error", "No se pudo conectar con el servidor");
+        //await JS.InvokeVoidAsync("loading_show");
+    }
+
+    protected async Task Cambiar()
+    {
+    }
+
+    void ValidatePassword(ValidatorEventArgs e)
+    {
+        e.Status = Convert.ToString(e.Value)?.Length >= 4 ? ValidationStatus.Success : ValidationStatus.Error;
+    }
+
+    protected async Task ValidateUser()
+    {
+        //await JS.MostrarLoding();
+        // var prueba = await JS.InvokeAsync<JsonElement>("localStorage.getItem", "UserData");
+        var a = selectedEmpresa;
+        var prueba = userValidations.ValidateAll();
+        if (await prueba)
+        {
+            userValidations.ClearAll();
+            if (user.empresa.id != null && user.empresa.descripcion != null)
+            {
+                //HACER PRIMER LOGIN
+                await loginAplicacion();
+            }
+        }
+        //await JS.OcultarLoding();
+        StateHasChanged();
+
+    }
+
+    private async Task loginAplicacion()
+    {
+        LoginUsuarioAplicacion primerlogin = new LoginUsuarioAplicacion() { usuario = user.User, password = user.Pass, idAplicacion = app.idAplicacion, tipoLogin = app.tipoLogin };
+        string url = "http://192.168.30.93:8099/api/Login/";
+        try
+        {
+            //Objeto dinamico
+            HttpResponseMessage responsex = await ConexionModel.Post(startUrl: settings.host, endUrl: "LoginUsuarioAplicacion", JsonConvert.SerializeObject(primerlogin));
+            if (responsex.StatusCode.ToString() == "OK")
+            {
+                var settings = new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        MissingMemberHandling = MissingMemberHandling.Ignore
+                    };
+                dynamic contenido = JsonConvert.DeserializeObject<ExpandoObject>(await responsex.Content.ReadAsStringAsync(), new ExpandoObjectConverter());
+                if (contenido != null)
+                {
+                    if (contenido.token != null)
+                    {
+                        user.id = Convert.ToInt32(contenido.idUsuario);
+                        user.Token = contenido.token;
+                        if (user.empresas.Count() > 1)
+                        {
+                            // mostrar listado de empresas
+                            if (user.empresa.id != 0 && user.empresa.descripcion != null)
+                            {
+                                await iniciar_sesion();
+                            }
+                            else
+                            {
+                                await snackbarStack.PushAsync("Favor seleccionar una empresa", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                                //await JS.MostrarAlerta("success", "Favor seleccionar una empresa");
+                            }
+                        }
+                        else if (user.empresas.Count() == 1)
+                        {
+                            //pasa directo
+                            await iniciar_sesion();
+                        }
+                        else
+                        {
+                            //no tiene empresas asignadas
+                            await snackbarStack.PushAsync("No tiene empresas asignadas", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                            //await JS.MostrarAlerta("error", "No tiene empresas asignadas");
+                        }
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        await snackbarStack.PushAsync("Error en el servidor", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                        //await JS.MostrarAlerta("error", "Error en el servidor");
+                    }
+                }
+            }
+            else
+            {
+                dynamic contenido = JsonConvert.DeserializeObject<ExpandoObject>(await responsex.Content.ReadAsStringAsync(), new ExpandoObjectConverter());
+
+                if (contenido != null)
+                {
+                    await snackbarStack.PushAsync($"{(string)contenido.message}", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                    //await JS.MostrarAlerta("error", (string)contenido.message);
+                }
+            }
+            //await JS.OcultarLoding();
+        }
+        catch (Exception ex)
+        {
+            var x = ex.Message + ex.StackTrace;
+            await snackbarStack.PushAsync($"Falló la validación del usuario", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+            //await JS.MostrarAlerta("error", "Falló la validación del usuario");
+            //await JS.OcultarLoding();
+        }
+    }
+
+    private async Task buscarEmpresas()
+    {
+
+        if (user.User != "")
+        {
+            //await JS.MostrarLoding();
+
+            LoginUsuarioAplicacion primerlogin = new LoginUsuarioAplicacion() { usuario = user.User, password = "", idAplicacion = app.idAplicacion, tipoLogin = app.tipoLogin };
+
+            try
+            {
+
+                //Objeto dinamico
+                HttpResponseMessage responsex = await ConexionModel.Post(startUrl: settings.host, endUrl: "LoginEmpresasUsuario", JsonConvert.SerializeObject(primerlogin));
+
+                if (responsex.StatusCode.ToString() == "OK")
+                {
+
+                    var settings = new JsonSerializerSettings
+                        {
+                            NullValueHandling = NullValueHandling.Ignore,
+                            MissingMemberHandling = MissingMemberHandling.Ignore
+                        };
+                    string test = await responsex.Content.ReadAsStringAsync();
+                    var contenido = JsonConvert.DeserializeObject<ConectarUsuarioEmpresa>(test, settings);
+
+                    if (contenido != null)
+                    {
+                        user.empresa = new Empresa();
+                        user.empresas = contenido.enpresas;
+                        if (user.empresas != null && user.empresas.Count() > 1)
+                        {
+                            // mostrar listado de empresas
+                            empresaData = user.empresas;
+                            StateHasChanged();
+                            await snackbarStack.PushAsync($"Favor seleccionar una empresa", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                            //await JS.MostrarAlerta("success", "Favor seleccionar una empresa");
+                        }
+                        else if (user.empresas != null && user.empresas.Count() == 1)
+                        {
+                            //pasa directo
+                            user.empresa = contenido.enpresas.First();
+                        }
+                        else
+                        {
+                            //no tiene empresas asignadas
+                            await snackbarStack.PushAsync($"No tiene empresas asignadas", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                            // await JS.MostrarAlerta("error", "No tiene empresas asignadas");
+                        }
+
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        await snackbarStack.PushAsync($"Error en el servidor", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                        //await JS.MostrarAlerta("error", "Error en el servidor");
+                    }
+                }
+                else
+                {
+                    dynamic contenido = JsonConvert.DeserializeObject<ExpandoObject>(await responsex.Content.ReadAsStringAsync(), new ExpandoObjectConverter());
+                    if (contenido != null)
+                    {
+                        await snackbarStack.PushAsync($"{(string)contenido.message}", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                        //await JS.MostrarAlerta("error", (string)contenido.message);
+                    }
+                }
+                //await JS.OcultarLoding();
+            }
+            catch (Exception ex)
+            {
+                var x = ex.Message + ex.StackTrace;
+                await snackbarStack.PushAsync($"No se encontró el usuario", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                //await JS.MostrarAlerta("error", "No se encontró el usuario");
+                //await JS.OcultarLoding();
+            }
+        }
+    }
+
+    private async Task loginConEmpresa()
+    {
+        await iniciar_sesion();
+    }
+
+    private IEnumerable<DemoBlazor.Models.Usuario> lstUsuarios = new List<DemoBlazor.Models.Usuario>();
+    private IList<PerfilModulo> lstModuloPerfil = new List<PerfilModulo>();
+
+
+    private async Task iniciar_sesion()
+    {
+        await loadingIndicator.Show();
+        await Task.Delay(2000);
+
+        ConectarUsuario usuarioEmpresa = new ConectarUsuario() { id_usuario = user.id, id_empresa = user.empresa.id, token = user.Token };
+        try
+        {
+            HttpResponseMessage responsex = await ConexionModel.Post(startUrl: settings.host, endUrl: "ConectarUsuarioEmpresa", JsonConvert.SerializeObject(usuarioEmpresa), ACCESS_TOKEN: user.Token);
+            if (responsex.StatusCode.ToString() == "OK")
+            {
+                var settings = new JsonSerializerSettings
+                    {
+                        NullValueHandling = NullValueHandling.Ignore,
+                        MissingMemberHandling = MissingMemberHandling.Ignore
+                    };
+                var datax = await responsex.Content.ReadFromJsonAsync<JsonElement>();
+                user.TokenAplicacion = datax.GetProperty("tokenAplicacion").ToString();
+
+                dynamic datos = JsonConvert.DeserializeObject<ExpandoObject>(await responsex.Content.ReadAsStringAsync(), new ExpandoObjectConverter());
+
+                if (datos != null)
+                {
+                    await saveUser();
+                    await saveSession();
+
+                    //await JS.MostrarAlerta("success", "Inicio éxitoso");
+
+                    var sessionTest = JsonConvert.DeserializeObject<SessionUser>(await JS.InvokeAsync<string>("sessionStorage.getItem", "SessionData"));
+                    lstUsuarios = await UsuariosServices.GetUsuariosAsync(sessionTest.Token, sessionTest.idEmpresa);/*Http.GetFromJsonAsync<List<Requisiciones.Shared.Usuario>>($"GetUsuariosEmpresa{sessionTest.idEmpresa}/{sessionTest.Token}");*/
+                    var userName = user.User;
+
+                    //var userTemlpppp = lstUsuarios.Where(x => x.Nombre == userName).FirstOrDefault();
+
+                    //lstModuloPerfil = await ModulosServices.GetModulosPerfilAsync(userTemlpppp.Id); /*Http.GetFromJsonAsync<List<PerfilModulo>>($"GetModuloPerfil{userTemlpppp.Id_perfil}");*/
+
+                    await loadingIndicator.Hide();
+                    NavigationManager.NavigateTo("/Inicio");
+                    StateHasChanged();
+
+                }
+                else
+                {
+                    await loadingIndicator.Hide();
+                    await snackbarStack.PushAsync($"Error en el servidor", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                    //await JS.MostrarAlerta("error", "Error en el servidor");
+                }
+            }
+            else
+            {
+                await loadingIndicator.Hide();
+                await snackbarStack.PushAsync($"No se pudo validar la conexión", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+                //await JS.MostrarAlerta("error", "No se pudo validar la conexión");
+            }
+            //await JS.OcultarLoding();
+        }
+        catch (Exception ex)
+        {
+            var x = ex.Message + ex.StackTrace;
+            await loadingIndicator.Hide();
+            await snackbarStack.PushAsync($"No se pudo validar la conexión", SnackbarColor.Warning, options => { options.IntervalBeforeClose = intervalBeforeMsgClose; });
+            //await JS.MostrarAlerta("error", "No se pudo validar la conexión");
+            //await JS.OcultarLoding();
+        }
+    }
+
+    private async Task saveSession()
+    {
+        session.Token = user.Token;
+        session.TokenAplicacion = user.TokenAplicacion;
+        session.idEmpresa = user.empresa.id;
+        session.Usuario = user.User;
+        session.HoraInicio = DateTime.Now;
+        session.idUser = user.id;
+        string stored = JsonConvert.SerializeObject(session);
+        await JS.InvokeVoidAsync("sessionStorage.setItem", "SessionData", stored);
+    }
+
+    private async Task saveUser()
+    {
+        user.Pass = "";
+        string stored = JsonConvert.SerializeObject(user);
+        if (user.RememberMe)
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", "UserData", stored);
+            //await JS.InvokeVoidAsync("alert", "Exito", "success", @$"Bienvenido {user.User}");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("localStorage.removeItem", "UserData", stored);
+            //await JS.InvokeVoidAsync("alert", "Exito", "success", @$"Bienvenido {user.User}");
+        }
+    }
+
+
+
+    public class SessionUser
+    {
+        public int idEmpresa { get; set; }
+        public string Token { get; set; }
+        public string TokenAplicacion { get; set; }
+        public string Usuario { get; set; }
+        public DateTime HoraInicio { get; set; }
+        public int idUser { get; set; }
+    }
+
+    LoadingIndicator loadingIndicator;
+
+}

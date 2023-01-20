@@ -1,0 +1,45 @@
+﻿@using DemoBlazor.Models.LoginModels
+@using DemoBlazor.Models.Utils
+
+@inherits LayoutComponentBase
+
+<CascadingValue Value="app">
+    @Body
+</CascadingValue>
+
+
+@code {
+
+    string uri;
+    SessionUser sessionTest;
+
+    Aplicacion app = new Aplicacion()
+        {
+            idAplicacion = "VK_APP_ENOLOGIA",
+            tituloApp = "Enologia",
+            tipoLogin = "APP",
+            id = "4",
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            uri = NavigationManager.Uri.ToString();
+            var z = JsonConvert.DeserializeObject<SessionUser>(await JS.InvokeAsync<string>("sessionStorage.getItem", "SessionData"));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("No se pudo cargar la session error : ", ex.Message);
+        }
+    }
+
+    [JSInvokable]
+    public async Task Logout()
+    {
+        await JS.InvokeVoidAsync("alert", "Info", "info", "Tu sesión expiró. Vuelve a iniciar sesión para continuar");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "SessionData");
+        sessionTest = null;
+        NavigationManager.NavigateTo("/");
+    }
+}

@@ -1,0 +1,149 @@
+﻿@*<Bar Mode="BarMode.VerticalInline"
+     Breakpoint="Breakpoint.Desktop"
+     Background="Background.Light"
+     ThemeContrast="ThemeContrast.Light">*@
+
+@*@inject IUsuariosService UsuariosServices;
+@inject IPerfilesService PerfilesServices;
+@inject IModulosService ModulosServices;*@
+
+<BarBrand>
+    <BarItem>
+        <img src="css/images/MontgrasWhite.png" width="230" height="60" style="padding-left:24px; padding-right:24px">
+    </BarItem>
+</BarBrand>
+<BarMenu>
+    <BarStart>
+        <BarItem>
+            <BarLink To="/Inicio">
+                <BarIcon IconName="IconName.Dashboard" />
+                Inicio
+            </BarLink>
+        </BarItem>
+        <BarItem>
+            <BarDropdown Display="@AccesoParametros">
+                <BarDropdownToggle>
+                    <BarIcon IconName="IconName.PuzzlePiece" />
+                    Parámetros
+                </BarDropdownToggle>
+                <BarDropdownMenu>
+                    <BarDropdownItem To="/Usuarios" Display="@AccesoUsuarios">
+                        Usuarios
+                    </BarDropdownItem>
+                    <BarDropdownItem To="/Perfiles" Display="@AccesoPerfiles">
+                        Perfiles
+                    </BarDropdownItem>
+                </BarDropdownMenu>
+            </BarDropdown>
+        </BarItem>
+        <BarItem>
+            <BarDropdown>
+                <BarDropdownToggle>
+                    <BarIcon IconName="IconName.Truck" />
+                    Recepción
+                </BarDropdownToggle>
+                <BarDropdownMenu>
+                    <BarDropdownItem To="/RecepcionUvaBlanca">
+                        Uva Blanca
+                    </BarDropdownItem>
+                    <BarDropdownItem To="RecepcionUvaTinta">
+                        Uva Tinta
+                    </BarDropdownItem>
+                </BarDropdownMenu>
+            </BarDropdown>
+        </BarItem>
+        <BarItem>
+            <BarDropdown>
+                <BarDropdownToggle>
+                    <BarIcon IconName="IconName.ListOl" />
+                    Operaciones
+                </BarDropdownToggle>
+                <BarDropdownMenu>
+                    <BarDropdownItem To="/Entradas">
+                        Entradas
+                    </BarDropdownItem>
+                    <BarDropdownItem To="/Movimientos">
+                        Movimientos
+                    </BarDropdownItem>
+                    <BarDropdownItem To="/Adiciones">
+                        Adiciones
+                    </BarDropdownItem>
+
+                    <BarDropdownItem To="/Ajustes">
+                        Ajustes
+                    </BarDropdownItem>
+                </BarDropdownMenu>
+            </BarDropdown>
+        </BarItem>
+    </BarStart>
+</BarMenu>
+@*</Bar>*@
+@code {
+    private bool uiElementsVisible = true;
+    private bool utilitiesVisible = false;
+    private bool extensionsVisible = false;
+    private bool formsVisible = false;
+    private bool datagridVisible = false;
+
+    RenderFragment customIcon =@<img src="/img/logoLlanquihue.png" class="iconPrincipal" />
+    ;
+
+    SessionUser sessionTest;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ValidaAccesoModulos();
+    }
+
+    private async Task LogOut()
+    {
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "SessionData");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "UserData");
+        sessionTest = null;
+    }
+
+
+    private dynamic AccesoParametros = Display.None;
+    private dynamic AccesoUsuarios = Display.None;
+    private dynamic AccesoPerfiles = Display.None;
+
+
+    static string userName;
+
+    private async Task ValidaAccesoModulos()
+    {
+        sessionTest = JsonConvert.DeserializeObject<SessionUser>(await JS.InvokeAsync<string>("sessionStorage.getItem", "SessionData"));
+        userName = sessionTest.Usuario;
+        var Usuarios = await UsuariosServices.GetUsuariosAsync(sessionTest.Token, sessionTest.idEmpresa);  /* Http.GetFromJsonAsync<List<Usuario>>($"GetUsuariosEmpresa{sessionTest.idEmpresa}/{sessionTest.Token}");*/
+        var UsuarioActual = Usuarios.Where(x => x.nombre == sessionTest.Usuario).FirstOrDefault();
+        var Modulos = await ModulosServices.GetModulosPerfilAsync(UsuarioActual.idPerfil); /*Http.GetFromJsonAsync<List<PerfilModulo>>($"GetModuloPerfil{UsuarioActual.Id_perfil}");*/
+
+
+
+        foreach (var item in Modulos)
+        {
+            switch (item.nombre)
+            {
+                case "Parametros":
+                    if (item.acceso)
+                        AccesoParametros = Display.Always;
+                    break;
+                case "Usuarios":
+                    if (item.acceso)
+                        AccesoUsuarios = Display.Always;
+                    break;
+                case "Perfiles":
+                    if (item.acceso)
+                        AccesoPerfiles = Display.Always;
+                    break;
+            }
+        }
+        StateHasChanged();
+    }
+
+    //[JSInvokable]
+    //public async Task ActivarModuloSideMenu()
+    //{
+    //    await ValidaAccesoModulos();
+    //}
+}

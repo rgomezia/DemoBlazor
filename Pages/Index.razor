@@ -1,3 +1,20 @@
-﻿@page "/"
+﻿@page "/Inicio"
+
+@using DemoBlazor.Models
 
 <h1>Hello, world!</h1>
+<h4>@TokenAPP</h4>
+<button @onclick="GetSession">Session</button>
+
+@inject IAccesosService accesos;
+
+@code{
+    string TokenAPP;
+
+    async Task GetSession()
+    {
+        var x = await accesos.GetSessionInfo();
+        TokenAPP = x.TokenAplicacion;
+        StateHasChanged();
+    }
+}
